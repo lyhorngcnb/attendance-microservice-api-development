@@ -1,0 +1,63 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: api-gateway
+  profiles:
+    active: dev
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: false
+      globalcors:
+        cors-configurations:
+          "[/**]":
+            allowed-origin-patterns: "http://localhost:3000,http://localhost:*,http://127.0.0.1:*"
+            allowed-methods: "GET,POST,PUT,DELETE,OPTIONS,PATCH"
+            allowed-headers: "*"
+            exposed-headers: "Authorization,X-User-Name,X-User-Id,X-User-Roles"
+            allow-credentials: true
+            max-age: 3600
+      default-filters:
+        - AddRequestHeader=X-Request-Source,APIGateway
+        - AddRequestHeader=X-Gateway-Version,1.0.0
+  main:
+    allow-bean-definition-overriding: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,metrics,gateway,prometheus"
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+logging:
+  level:
+    root: INFO
+    com.rbc.demo.apigateway: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web: INFO
+    org.springframework.security: DEBUG
+    reactor.netty: INFO
+jwt:
+  secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+  expiration: 86400000
+  refresh-expiration: 604800000
+gateway:
+  security:
+    public-endpoints: "/api/auth/**,/actuator/**,/h2-console/**"
+    admin-endpoints: "/api/admin/**"
+    manager-endpoints: "/api/manager/**"
+user-service:
+  url: http://localhost:8081
+auth-service:
+  url: http://localhost:8082
+customer-service:
+  url: http://localhost:8083
+property-service:
+  url: http://localhost:8084
