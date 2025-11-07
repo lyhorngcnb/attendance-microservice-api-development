@@ -10,37 +10,16 @@ import com.rbc.userservice.repository.UserRepository;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * UserService - Business Logic Layer
- * 
- * Handles business rules, validation, and coordinates repository operations
- * 
- * @Service - Marks as service component (Spring manages it)
- * @RequiredArgsConstructor - Lombok: generates constructor for final fields
- * @Transactional - Ensures database transactions (rollback on error)
- */
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class UserService {
     
-    /**
-     * Dependency Injection
-     * Spring automatically injects UserRepository instance
-     * 'final' ensures it cannot be changed after initialization
-     */
     private final UserRepository userRepository;
     
     /**
      * CREATE - Create new user
-     * 
-     * Business Logic:
-     * 1. Check if username/email already exists
-     * 2. Save user to database
-     * 
-     * @param user - User object to create
-     * @return Created user with generated ID
-     * @throws RuntimeException if username/email exists
+     * UPDATED: Includes validation for new fields
      */
     public User createUser(User user) {
         // Validation: Check duplicate username
@@ -53,42 +32,34 @@ public class UserService {
             throw new RuntimeException("Email already exists: " + user.getEmail());
         }
         
+        // Set default values if not provided
+        if (user.getEnabled() == null) {
+            user.setEnabled(true);
+        }
+        
+        if (user.getStatus() == null) {
+            user.setStatus(User.UserStatus.ACTIVE);
+        }
+        
         // Save and return (with generated ID)
         return userRepository.save(user);
     }
     
-    /**
-     * READ - Get all users
-     * 
-     * @return List of all users
-     */
-    @Transactional(readOnly = true) // Optimization for read operations
+    @Transactional(readOnly = true)
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
     
-    /**
-     * READ - Get user by ID
-     * 
-     * @param id - User ID
-     * @return Optional containing user if found
-     */
     @Transactional(readOnly = true)
     public Optional<User> getUserById(Long id) {
         return userRepository.findById(id);
     }
     
-    /**
-     * READ - Get user by username
-     */
     @Transactional(readOnly = true)
     public Optional<User> getUserByUsername(String username) {
         return userRepository.findByUsername(username);
     }
     
-    /**
-     * READ - Get user by email
-     */
     @Transactional(readOnly = true)
     public Optional<User> getUserByEmail(String email) {
         return userRepository.findByEmail(email);
@@ -96,17 +67,7 @@ public class UserService {
     
     /**
      * UPDATE - Update existing user
-     * 
-     * Business Logic:
-     * 1. Check if user exists
-     * 2. Check if new username/email conflicts with other users
-     * 3. Update fields
-     * 4. Save changes
-     * 
-     * @param id - User ID to update
-     * @param userDetails - New user data
-     * @return Updated user
-     * @throws RuntimeException if user not found or conflicts exist
+     * UPDATED: Includes new fields
      */
     public User updateUser(Long id, User userDetails) {
         // Find existing user
@@ -132,23 +93,20 @@ public class UserService {
         existingUser.setEmail(userDetails.getEmail());
         existingUser.setFirstName(userDetails.getFirstName());
         existingUser.setLastName(userDetails.getLastName());
-        // existingUser.setStatus(userDetails.getStatus());
+        existingUser.setName(userDetails.getName());
+        existingUser.setNid(userDetails.getNid());
+        existingUser.setPhone(userDetails.getPhone());
+        existingUser.setEnabled(userDetails.getEnabled());
+        existingUser.setStatus(userDetails.getStatus());
         
         // Only update password if provided
         if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
             existingUser.setPassword(userDetails.getPassword());
         }
         
-        // Save and return
         return userRepository.save(existingUser);
     }
     
-    /**
-     * DELETE - Delete user by ID
-     * 
-     * @param id - User ID to delete
-     * @throws RuntimeException if user not found
-     */
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
             throw new RuntimeException("User not found with id: " + id);
@@ -156,25 +114,40 @@ public class UserService {
         userRepository.deleteById(id);
     }
     
-    /**
-     * SEARCH - Find users by status
-     */
     @Transactional(readOnly = true)
     public List<User> getUsersByStatus(User.UserStatus status) {
         return userRepository.findByStatus(status);
     }
     
-    /**
-     * SEARCH - Search users by first name
-     */
     @Transactional(readOnly = true)
     public List<User> searchUsersByFirstName(String firstName) {
         return userRepository.findByFirstNameContainingIgnoreCase(firstName);
     }
     
     /**
-     * COUNT - Get total user count
+     * NEW: Search users by phone
      */
+    @Transactional(readOnly = true)
+    public Optional<User> getUserByPhone(String phone) {
+        return userRepository.findByPhone(phone);
+    }
+    
+    /**
+     * NEW: Search users by NID
+     */
+    @Transactional(readOnly = true)
+    public Optional<User> getUserByNid(String nid) {
+        return userRepository.findByNid(nid);
+    }
+    
+    /**
+     * NEW: Get enabled/disabled users
+     */
+    @Transactional(readOnly = true)
+    public List<User> getUsersByEnabled(boolean enabled) {
+        return userRepository.findByEnabled(enabled);
+    }
+    
     @Transactional(readOnly = true)
     public long getTotalUsers() {
         return userRepository.count();
