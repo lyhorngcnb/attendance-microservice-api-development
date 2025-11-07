@@ -1,99 +1,104 @@
-// File: service/AuthService.java
 package com.lyhorng.authservice.service;
 
-import com.lyhorng.authservice.dto.JwtResponse;
-import com.lyhorng.authservice.dto.LoginRequest;
-import com.lyhorng.authservice.dto.RegisterRequest;
-import com.lyhorng.authservice.model.User;
-import com.lyhorng.authservice.repository.UserRepository;
-import com.lyhorng.authservice.security.JwtUtil;
-import lombok.RequiredArgsConstructor;
+import com.lyhorng.authservice.client.UserServiceClient;
+import com.lyhorng.authservice.dto.LoginResponse;
+import com.lyhorng.authservice.dto.UserDTO;
+import com.lyhorng.authservice.utils.JwtUtil;
+
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
-@RequiredArgsConstructor
 public class AuthService {
     
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final UserServiceClient userServiceClient;
     private final JwtUtil jwtUtil;
+    private final PasswordEncoder passwordEncoder;
     
-    public ApiResponse register(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
-            return new ApiResponse(false, "Username already exists");
+    public AuthService(UserServiceClient userServiceClient, JwtUtil jwtUtil, PasswordEncoder passwordEncoder) {
+        this.userServiceClient = userServiceClient;
+        this.jwtUtil = jwtUtil;
+        this.passwordEncoder = passwordEncoder;
+    }
+    
+    public LoginResponse login(String username, String password) {
+        log.info("Login attempt for username: {}", username);
+        
+        // Get user from user service
+        UserDTO user = userServiceClient.getUserByUsername(username);
+        
+        if (user == null) {
+            log.warn("User not found: {}", username);
+            throw new RuntimeException("Invalid username or password");
         }
         
-        if (userRepository.existsByEmail(request.getEmail())) {
-            return new ApiResponse(false, "Email already exists");
+        // Check if user is active
+        if (!"ACTIVE".equals(user.getStatus())) {
+            log.warn("User account is not active: {}", username);
+            throw new RuntimeException("User account is not active");
         }
         
-        User user = User.builder()
-                .username(request.getUsername())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .enabled(true)
+        // Validate password
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            log.warn("Invalid password for user: {}", username);
+            throw new RuntimeException("Invalid username or password");
+        }
+        
+        log.info("User authenticated successfully: {}", username);
+        
+        // Generate access token
+        String token = jwtUtil.generateAccessToken(username, user.getId());
+        
+        // Return complete LoginResponse with all user information
+        return LoginResponse.builder()
+                .success(true)
+                .message("Login successful")
+                .token(token)
+                .username(user.getUsername())
+                .userId(user.getId())
+                .expiresIn(jwtUtil.getExpirationTime())
                 .build();
-        
-        userRepository.save(user);
-        return new ApiResponse(true, "User registered successfully");
     }
-    
-    public JwtResponse login(LoginRequest request) {
-        User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+
+    public String refreshToken(String refreshToken) {
+        log.info("Refreshing token");
         
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid credentials");
+        // Validate the refresh token
+        if (!jwtUtil.isRefreshToken(refreshToken)) {
+            throw new RuntimeException("Invalid refresh token");
         }
         
-        if (!user.getEnabled()) {
-            throw new RuntimeException("Account is disabled");
-        }
+        // Extract username from refresh token
+        String username = jwtUtil.extractUsername(refreshToken);
+        Long userId = jwtUtil.extractUserId(refreshToken);
         
-        String token = jwtUtil.generateToken(user.getUsername(), user.getId());
-        
-        return new JwtResponse(
-                token,
-                "Bearer",
-                user.getId(),
-                user.getUsername(),
-                user.getEmail()
-        );
+        // Generate new access token
+        return jwtUtil.generateAccessToken(username, userId);
     }
-    
-    public JwtResponse refreshToken(String oldToken) {
-        String token = oldToken.substring(7); // Remove "Bearer "
-        String username = jwtUtil.getUsernameFromToken(token);
-        
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        
-        String newToken = jwtUtil.generateToken(user.getUsername(), user.getId());
-        
-        return new JwtResponse(
-                newToken,
-                "Bearer",
-                user.getId(),
-                user.getUsername(),
-                user.getEmail()
-        );
-    }
-    
-    // Inner class for ApiResponse (if using common package)
-    // Or create separate file in dto package
-    public static class ApiResponse {
-        private Boolean success;
-        private String message;
-        
-        public ApiResponse(Boolean success, String message) {
-            this.success = success;
-            this.message = message;
+
+    public boolean validateToken(String token) {
+        try {
+            // Extract username from token
+            String username = jwtUtil.extractUsername(token);
+            
+            // Get user to validate
+            UserDTO user = userServiceClient.getUserByUsername(username);
+            if (user == null) {
+                return false;
+            }
+            
+            // Validate token with username
+            return jwtUtil.validateToken(token, username);
+        } catch (Exception e) {
+            log.error("Token validation failed: {}", e.getMessage());
+            return false;
         }
-        
-        public Boolean getSuccess() { return success; }
-        public String getMessage() { return message; }
+    }
+
+    // Add this getter method
+    public JwtUtil getJwtUtil() {
+        return jwtUtil;
     }
 }

@@ -1,0 +1,10 @@
+server:
+  port: 8082
+
+user-service:
+  url: http://localhost:8081
+
+jwt:
+  secret: your-secret-key-change-this-in-production-make-it-long-and-secure
+  expiration: 86400000  # 24 hours
+  refresh-expiration: 604800000  # 7 days
