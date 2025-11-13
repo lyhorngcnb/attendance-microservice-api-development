@@ -10,36 +10,43 @@ import com.lyhorng.propertyservice.repository.CategoryRepository;
 
 @Service
 public class CategoryService {
-    
+
     @Autowired
     public CategoryRepository categoryRepository;
 
     // List
     public List<Category> getAllCategory() {
-      return categoryRepository.findAll();
+        return categoryRepository.findAll();
     }
+
     // View
     public Category getCategory(Long id) {
         return categoryRepository.findById(id)
-        .orElseThrow(() -> new RuntimeException("Category is Not Found ID :" + id));
+                .orElseThrow(() -> new RuntimeException("Category is Not Found ID :" + id));
     }
+
     // Create
     public Category createCategory(String categoryName) {
         Category category = new Category();
         category.setCategory(categoryName);
         return categoryRepository.save(category);
     }
+
     // Update
     public Category updateCategory(Long id, String categoryName) {
         Optional<Category> exitingCategory = categoryRepository.findById(id);
-        if(exitingCategory.isPresent()) {
+        if (exitingCategory.isPresent()) {
             Category category = exitingCategory.get();
             category.setCategory(categoryName);
             return categoryRepository.save(category);
         } else {
             throw new RuntimeException("Category is not found ID:" + id);
         }
-    
+
     }
     // Delete
+
+    public Category findById(Long id) {
+        return categoryRepository.findById(id).orElseThrow(() -> new RuntimeException("Category not found"));
+    }
 }

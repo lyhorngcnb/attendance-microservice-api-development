@@ -230,4 +230,8 @@ public class PropertyService {
         Files.copy(file.getInputStream(), targetLocation);
         return fileName;
     }
+
+    public Property findById(Long id) {
+        return propertyRepository.findById(id).orElseThrow(() -> new RuntimeException("Property not found"));
+    }
 }

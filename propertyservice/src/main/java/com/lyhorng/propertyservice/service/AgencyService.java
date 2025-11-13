@@ -41,8 +41,12 @@ public class AgencyService {
     // Delete
 
     // get Info
-    public Agency getAgency(Long id){
+    public Agency getAgency(Long id) {
         return agencyRepository.findById(id)
-        .orElseThrow(() -> new RuntimeException("Agency Not found ID: "+ id));
+                .orElseThrow(() -> new RuntimeException("Agency Not found ID: " + id));
+    }
+
+    public Agency findById(Long id) {
+        return agencyRepository.findById(id).orElseThrow(() -> new RuntimeException("Agency not found"));
     }
 }
