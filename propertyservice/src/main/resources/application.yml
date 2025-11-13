@@ -1,0 +1,34 @@
+# ========================================
+# DATABASE CONNECTION SETTINGS
+# ========================================
+spring:
+  datasource:
+    # JDBC URL to connect to MySQL database
+    url: jdbc:mysql://34.134.201.190:3306/db_property_service?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: developer-01
+    password: P@ssw0rd
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  
+  # ========================================
+  # JPA/HIBERNATE SETTINGS
+  # ========================================
+  jpa:
+    # Show SQL queries in console (useful for debugging)
+    show-sql: true
+    properties:
+      hibernate:
+        # Format SQL for better readability
+        format_sql: true
+        # Database dialect - tells Hibernate how to generate MySQL-specific SQL
+        dialect: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      # DDL strategy: update = auto-update schema based on entities
+      # Options: none, validate, update, create, create-drop
+      # update = safe for dev, creates tables if not exists
+      ddl-auto: update
+  
+  application:
+    name: propertyservice
+
+server:
+  port: 8084
